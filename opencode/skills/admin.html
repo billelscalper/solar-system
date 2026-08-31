@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Aria Bali Massage</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sage: { 50:'#f4f7f5',100:'#e6ede8',200:'#cddbd2',300:'#a8c2b0',400:'#7c9a82',500:'#5c7d63',600:'#48654e' },
+            sand: { 50:'#faf8f4',100:'#f5f0e8',200:'#ebe0d0' },
+            wood: { 300:'#c4b4a5',400:'#ab9382',500:'#997d6a',600:'#8c6e5d',700:'#755b4e',800:'#614c43',900:'#3d2b1f' }
+          },
+          fontFamily: { serif: ['Playfair Display','serif'], sans: ['Inter','sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .nav-blur { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.4s ease-out; }
+    .row-enter { animation: fadeIn 0.3s ease-out; }
+  </style>
+</head>
+<body class="bg-sand-50 min-h-screen">
+
+  <!-- LOGIN OVERLAY -->
+  <div id="login-overlay" class="fixed inset-0 z-50 bg-sand-50 flex items-center justify-center">
+    <div class="bg-white rounded-3xl p-8 md:p-12 shadow-xl border border-sand-200 w-full max-w-md mx-4 text-center">
+      <div class="w-16 h-16 mx-auto mb-6 rounded-full bg-sage-400 flex items-center justify-center">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      </div>
+      <h1 class="font-serif text-2xl font-semibold text-wood-900 mb-2">Administration</h1>
+      <p class="text-wood-500 text-sm mb-8">Aria Bali Massage — Gestion des réservations</p>
+      <div>
+        <label class="block text-sm font-medium text-wood-700 mb-2 text-left">Mot de passe</label>
+        <input type="password" id="login-password" placeholder="Entrez le mot de passe"
+          class="w-full px-4 py-3 rounded-xl border-2 border-sand-200 focus:border-sage-400 focus:outline-none text-wood-800 mb-4 transition-colors"
+          onkeydown="if(event.key==='Enter')login()">
+        <button onclick="login()" class="w-full bg-sage-400 hover:bg-sage-500 text-white font-semibold py-3 rounded-xl transition-colors">
+          Accéder au tableau de bord
+        </button>
+        <p id="login-error" class="text-red-500 text-sm mt-3 hidden">Mot de passe incorrect</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN DASHBOARD (hidden until login) -->
+  <div id="dashboard" class="hidden">
+
+    <!-- Header -->
+    <header class="bg-white/80 nav-blur border-b border-sand-200 sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-sage-400 flex items-center justify-center">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+          </div>
+          <span class="font-serif text-lg font-semibold text-wood-900">Aria Bali — Admin</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <span id="booking-count" class="text-sm text-wood-500"></span>
+          <button onclick="loadBookings()" class="p-2 rounded-lg hover:bg-sage-50 transition-colors" title="Rafraîchir">
+            <svg class="w-5 h-5 text-wood-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
+          <a href="aria-bali-massage.html" class="text-sm text-wood-500 hover:text-sage-600 transition-colors">Voir le site</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+          <span class="block text-2xl font-serif font-semibold text-wood-900" id="stat-total">0</span>
+          <span class="text-xs text-wood-500 uppercase tracking-wider">Total</span>
+        </div>
+        <div class="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+          <span class="block text-2xl font-serif font-semibold text-gold-500" id="stat-attente">0</span>
+          <span class="text-xs text-wood-500 uppercase tracking-wider">En attente</span>
+        </div>
+        <div class="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+          <span class="block text-2xl font-serif font-semibold text-sage-500" id="stat-confirme">0</span>
+          <span class="text-xs text-wood-500 uppercase tracking-wider">Confirmés</span>
+        </div>
+        <div class="bg-white rounded-2xl p-5 border border-sand-200 shadow-sm">
+          <span class="block text-2xl font-serif font-semibold text-red-400" id="stat-annule">0</span>
+          <span class="text-xs text-wood-500 uppercase tracking-wider">Annulés</span>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="flex flex-wrap items-center gap-3 mb-6">
+        <span class="text-sm font-medium text-wood-600">Filtrer :</span>
+        <button onclick="filterBookings('all')" class="filter-btn active px-4 py-2 rounded-full text-sm font-medium bg-sage-400 text-white transition-all" data-filter="all">Tous</button>
+        <button onclick="filterBookings('en_attente')" class="filter-btn px-4 py-2 rounded-full text-sm font-medium bg-sand-100 text-wood-600 hover:bg-sand-200 transition-all" data-filter="en_attente">En attente</button>
+        <button onclick="filterBookings('confirme')" class="filter-btn px-4 py-2 rounded-full text-sm font-medium bg-sand-100 text-wood-600 hover:bg-sand-200 transition-all" data-filter="confirme">Confirmés</button>
+        <button onclick="filterBookings('annule')" class="filter-btn px-4 py-2 rounded-full text-sm font-medium bg-sand-100 text-wood-600 hover:bg-sand-200 transition-all" data-filter="annule">Annulés</button>
+      </div>
+
+      <!-- Table -->
+      <div class="bg-white rounded-2xl border border-sand-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-sand-200 bg-sand-50/50">
+                <th class="text-left px-5 py-3 text-xs font-semibold text-wood-500 uppercase tracking-wider">Date</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-wood-500 uppercase tracking-wider">Heure</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-wood-500 uppercase tracking-wider">Soin</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-wood-500 uppercase tracking-wider">Client</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-wood-500 uppercase tracking-wider">Téléphone</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-wood-500 uppercase tracking-wider">Statut</th>
+                <th class="text-right px-5 py-3 text-xs font-semibold text-wood-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="bookings-table" class="divide-y divide-sand-100">
+              <tr><td colspan="7" class="px-5 py-12 text-center text-wood-400 text-sm">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+    <div id="toast-content" class="flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg border nav-blur text-sm font-medium"></div>
+  </div>
+
+<script>
+const ADMIN_PASSWORD = 'aria2024';
+const db = supabase.createClient(
+  'https://qrxkglwedygekmgrmzfb.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyeGtnbHdlZHlnZWttZ3JtemZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxNzQ3NDgsImV4cCI6MjEwMzc1MDc0OH0.FYnbUtLuvgj8AqrHR9DzfN-I7vOy-18dZuyO_c9ogHE'
+);
+
+let allBookings = [];
+let currentFilter = 'all';
+
+// Auth
+function login() {
+  const pass = document.getElementById('login-password').value;
+  if (pass === ADMIN_PASSWORD) {
+    document.getElementById('login-overlay').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    loadBookings();
+  } else {
+    document.getElementById('login-error').classList.remove('hidden');
+    setTimeout(() => document.getElementById('login-error').classList.add('hidden'), 3000);
+  }
+}
+
+// Load bookings
+async function loadBookings() {
+  const { data, error } = await db
+    .from('bookings')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error(error);
+    showToast('Erreur de chargement', 'error');
+    return;
+  }
+
+  allBookings = data || [];
+  updateStats();
+  renderBookings();
+}
+
+// Stats
+function updateStats() {
+  document.getElementById('stat-total').textContent = allBookings.length;
+  document.getElementById('stat-attente').textContent = allBookings.filter(b => b.statut === 'en_attente').length;
+  document.getElementById('stat-confirme').textContent = allBookings.filter(b => b.statut === 'confirme').length;
+  document.getElementById('stat-annule').textContent = allBookings.filter(b => b.statut === 'annule').length;
+  document.getElementById('booking-count').textContent = `${allBookings.length} réservation${allBookings.length > 1 ? 's' : ''}`;
+}
+
+// Filter
+function filterBookings(filter) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    const isActive = btn.dataset.filter === filter;
+    btn.className = `filter-btn px-4 py-2 rounded-full text-sm font-medium transition-all ${isActive ? 'bg-sage-400 text-white' : 'bg-sand-100 text-wood-600 hover:bg-sand-200'}`;
+  });
+  renderBookings();
+}
+
+// Render table
+function renderBookings() {
+  const filtered = currentFilter === 'all' ? allBookings : allBookings.filter(b => b.statut === currentFilter);
+  const tbody = document.getElementById('bookings-table');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="px-5 py-12 text-center text-wood-400 text-sm">Aucune réservation trouvée</td></tr>';
+    return;
+  }
+
+  const statusLabels = { en_attente: 'En attente', confirme: 'Confirmé', annule: 'Annulé' };
+  const statusColors = {
+    en_attente: 'bg-gold-500/10 text-gold-600 border-gold-500/20',
+    confirme: 'bg-sage-100 text-sage-600 border-sage-200',
+    annule: 'bg-red-50 text-red-500 border-red-200'
+  };
+
+  tbody.innerHTML = filtered.map(b => {
+    const date = new Date(b.date_rdv).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+    return `<tr class="row-enter hover:bg-sand-50/50 transition-colors">
+      <td class="px-5 py-4 text-sm font-medium text-wood-800">${date}</td>
+      <td class="px-5 py-4 text-sm text-wood-600">${b.heure_rdv}</td>
+      <td class="px-5 py-4 text-sm text-wood-600">${b.soin}</td>
+      <td class="px-5 py-4">
+        <div class="text-sm font-medium text-wood-800">${b.nom_complet}</div>
+        ${b.adresse ? `<div class="text-xs text-wood-400 mt-0.5">${b.adresse}</div>` : ''}
+      </td>
+      <td class="px-5 py-4 text-sm text-wood-600">${b.telephone}</td>
+      <td class="px-5 py-4">
+        <span class="inline-flex px-3 py-1 rounded-full text-xs font-semibold border ${statusColors[b.statut]}">
+          ${statusLabels[b.statut]}
+        </span>
+      </td>
+      <td class="px-5 py-4 text-right">
+        <div class="flex items-center justify-end gap-2">
+          ${b.statut !== 'confirme' ? `<button onclick="updateStatus('${b.id}','confirme')" class="p-1.5 rounded-lg bg-sage-50 hover:bg-sage-100 text-sage-600 transition-colors" title="Confirmer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></button>` : ''}
+          ${b.statut !== 'annule' ? `<button onclick="updateStatus('${b.id}','annule')" class="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-colors" title="Annuler"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>` : ''}
+          <a href="https://wa.me/${b.telephone.replace(/[^0-9]/g,'')}?text=Bonjour%2C%20concernant%20votre%20réservation%20${encodeURIComponent(b.soin)}%20du%20${encodeURIComponent(b.date_rdv)}" target="_blank" class="p-1.5 rounded-lg bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] transition-colors" title="WhatsApp"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// Update status
+async function updateStatus(id, newStatus) {
+  const { error } = await db.from('bookings').update({ statut: newStatus }).eq('id', id);
+  if (error) {
+    showToast('Erreur lors de la mise à jour', 'error');
+    return;
+  }
+  showToast(`Réservation ${newStatus === 'confirme' ? 'confirmée' : 'annulée'}`, 'success');
+  loadBookings();
+}
+
+// Toast
+function showToast(message, type = 'success') {
+  const toast = document.getElementById('toast');
+  const content = document.getElementById('toast-content');
+  const colors = { success: 'bg-sage-50 border-sage-200 text-sage-700', error: 'bg-red-50 border-red-200 text-red-700' };
+  const icons = {
+    success: '<svg class="w-5 h-5 text-sage-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>',
+    error: '<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>'
+  };
+  content.className = `flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg border nav-blur text-sm font-medium ${colors[type]}`;
+  content.innerHTML = `${icons[type]}<span>${message}</span>`;
+  toast.classList.remove('hidden');
+  setTimeout(() => toast.classList.add('hidden'), 3000);
+}
+</script>
+</body>
+</html>
